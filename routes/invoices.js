@@ -4,7 +4,7 @@ const db = require("../db");
 
 // GET /invoices
 router.get("/", async (req, res, next) => {
-	const result = await db.query("SELECT id, comp_code FROM invoices");
+	const result = await db.query("SELECT id, comp_code, amt FROM invoices");
 	return res.json({ invoices: result.rows });
 });
 
@@ -36,16 +36,33 @@ router.post("/", async (req, res, next) => {
 	return res.status(201).json({ invoice: result.rows[0] });
 });
 
-// PUT /invoices/[id]
+// PUT /invoices/:id
 router.put("/:id", async (req, res, next) => {
-	const { amt } = req.body;
-	const result = await db.query(
-		"UPDATE invoices SET amt = $1 WHERE id = $2 RETURNING id, comp_code, amt, paid, add_date, paid_date",
-		[amt, req.params.id]
+	const { amt, paid } = req.body;
+	let paid_date = null;
+
+	const currentInvoice = await db.query(
+		"SELECT paid, paid_date FROM invoices WHERE id = $1",
+		[req.params.id]
 	);
-	if (result.rows.length === 0) {
+
+	if (currentInvoice.rows.length === 0) {
 		return res.sendStatus(404);
 	}
+
+	if (paid === true && currentInvoice.rows[0].paid === false) {
+		paid_date = new Date();
+	} else if (paid === false) {
+		paid_date = null;
+	} else {
+		paid_date = currentInvoice.rows[0].paid_date;
+	}
+
+	const result = await db.query(
+		"UPDATE invoices SET amt = $1, paid = $2, paid_date = $3 WHERE id = $4 RETURNING id, comp_code, amt, paid, add_date, paid_date",
+		[amt, paid, paid_date, req.params.id]
+	);
+
 	return res.json({ invoice: result.rows[0] });
 });
 

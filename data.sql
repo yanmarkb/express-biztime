@@ -1,5 +1,3 @@
-\c biztime
-
 DROP TABLE IF EXISTS invoices;
 DROP TABLE IF EXISTS companies;
 
@@ -18,6 +16,23 @@ CREATE TABLE invoices (
     paid_date date,
     CONSTRAINT invoices_amt_check CHECK ((amt > (0)::double precision))
 );
+
+CREATE TABLE industries (
+  code text PRIMARY KEY,
+  industry text NOT NULL UNIQUE
+);
+
+CREATE TABLE company_industries (
+  company_code text REFERENCES companies(code) ON DELETE CASCADE,
+  industry_code text REFERENCES industries(code) ON DELETE CASCADE,
+  PRIMARY KEY (company_code, industry_code)
+);
+
+INSERT INTO industries (code, industry)
+VALUES ('acct', 'Accounting');
+
+INSERT INTO company_industries (company_code, industry_code)
+VALUES ('apple', 'acct');
 
 INSERT INTO companies
   VALUES ('apple', 'Apple Computer', 'Maker of OSX.'),

@@ -4,28 +4,54 @@ const db = require("../db");
 
 describe("Companies Routes", () => {
 	beforeEach(async () => {
+		await db.query("DELETE FROM invoices");
 		await db.query("DELETE FROM companies");
 		await db.query(
 			"INSERT INTO companies (code, name, description) VALUES ($1, $2, $3)",
 			["COMP1", "Company 1", "Sample description"]
 		);
+		await db.query(
+			"INSERT INTO companies (code, name, description) VALUES ($1, $2, $3)",
+			["apple", "Apple Computer", "Innovative technology company"]
+		);
+		await db.query("INSERT INTO invoices (comp_code, amt) VALUES ($1, $2)", [
+			"COMP1",
+			100,
+		]);
+		const result = await db.query(
+			"INSERT INTO invoices (comp_code, amt, paid, add_date, paid_date) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+			["apple", 100, false, new Date(), null]
+		);
+		invoiceId = result.rows[0].id;
 	});
 
 	afterEach(async () => {
-		await db.query("DELETE FROM companies WHERE code = $1", ["COMP1"]);
+		await db.query("DELETE FROM invoices");
+		await db.query("DELETE FROM companies");
 	});
 
 	test("GET /companies", async () => {
 		const response = await request(app).get("/companies");
 		expect(response.statusCode).toBe(200);
-		expect(response.body.companies).toHaveLength(1);
-		expect(response.body.companies[0]).toEqual({
-			code: "COMP1",
-			name: "Company 1",
-		});
+		expect(response.body.companies).toHaveLength(2);
+		expect(response.body.companies).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					code: "COMP1",
+					name: "Company 1",
+				}),
+				expect.objectContaining({
+					code: "apple",
+					name: "Apple Computer",
+				}),
+			])
+		);
 	});
 
 	test("GET /companies/:code", async () => {
+		// Clear the invoices for the company
+		await db.query("DELETE FROM invoices WHERE comp_code = $1", ["COMP1"]);
+
 		const response = await request(app).get("/companies/COMP1");
 		expect(response.statusCode).toBe(200);
 		expect(response.body.company).toEqual({
@@ -38,13 +64,13 @@ describe("Companies Routes", () => {
 
 	test("POST /companies", async () => {
 		const response = await request(app).post("/companies").send({
-			code: "COMP2",
+			code: "company-2",
 			name: "Company 2",
 			description: "Another company",
 		});
 		expect(response.statusCode).toBe(201);
 		expect(response.body.company).toEqual({
-			code: "COMP2",
+			code: "company-2",
 			name: "Company 2",
 			description: "Another company",
 		});
@@ -67,6 +93,7 @@ describe("Companies Routes", () => {
 	});
 
 	test("DELETE /companies/:code", async () => {
+		await db.query("DELETE FROM invoices WHERE comp_code = $1", ["COMP1"]);
 		const response = await request(app).delete("/companies/COMP1");
 		expect(response.statusCode).toBe(200);
 		expect(response.body).toEqual({ status: "deleted" });

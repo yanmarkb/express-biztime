@@ -1,19 +1,19 @@
 {
-  "name": "express-biztime",
-  "version": "1.0.0",
-  "description": "",
-  "main": "app.js",
-  "scripts": {
-    "test": "jest --coverage",
-    "start": "node server.js"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "express": "^4.19.2",
-    "jest": "^29.7.0",
-    "pg": "^8.11.3",
-    "supertest": "^6.3.4"
-  }
+    "name": "express-biztime",
+    "version": "1.0.0",
+    "description": "",
+    "main": "app.js",
+    "scripts": {
+        "test": "NODE_ENV=test jest --coverage",
+        "start": "node server.js"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "express": "^4.19.2",
+        "jest": "^29.7.0",
+        "pg": "^8.11.3",
+        "supertest": "^6.3.4"
+    }
 }

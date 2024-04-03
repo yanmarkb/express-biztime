@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
+const slugify = require("slugify");
 
 // GET /companies
 router.get("/", async (req, res, next) => {
@@ -10,25 +11,37 @@ router.get("/", async (req, res, next) => {
 
 // GET /companies/[code]
 router.get("/:code", async (req, res, next) => {
-	const companyResult = await db.query(
-		"SELECT code, name, description FROM companies WHERE code = $1",
-		[req.params.code]
-	);
-	if (companyResult.rows.length === 0) {
-		return res.sendStatus(404);
+	try {
+		const companyRes = await db.query(
+			"SELECT * FROM companies WHERE code = $1",
+			[req.params.code]
+		);
+
+		if (companyRes.rows.length === 0) {
+			return res.status(404).json({ error: "Company not found" });
+		}
+
+		const company = companyRes.rows[0];
+
+		const invoicesRes = await db.query(
+			"SELECT id FROM invoices WHERE comp_code = $1",
+			[req.params.code]
+		);
+
+		const invoices = invoicesRes.rows;
+
+		company.invoices = invoices;
+
+		return res.json({ company: company });
+	} catch (err) {
+		return next(err);
 	}
-	const company = companyResult.rows[0];
-	const invoicesResult = await db.query(
-		"SELECT id FROM invoices WHERE comp_code = $1",
-		[req.params.code]
-	);
-	company.invoices = invoicesResult.rows.map((row) => row.id);
-	return res.json({ company: company });
 });
 
 // POST /companies
 router.post("/", async (req, res, next) => {
-	const { code, name, description } = req.body;
+	const { name, description } = req.body;
+	const code = slugify(name, { lower: true, strict: true });
 	const result = await db.query(
 		"INSERT INTO companies (code, name, description) VALUES ($1, $2, $3) RETURNING code, name, description",
 		[code, name, description]
